@@ -1,39 +1,34 @@
 {
   "name": "git-commit-tools",
-  "displayName": "git-commit-tools",
-  "description": "",
-  "version": "0.0.1",
+  "displayName": "Git Commit Tools",
+  "description": "Edit commit messages and squash arbitrary commits, inspired by CLion",
+  "version": "0.1.1",
   "engines": {
-    "vscode": "^1.103.0"
+    "vscode": "^1.85.0"
   },
-  "categories": [
-    "Other"
-  ],
+  "categories": ["SCM Providers"],
   "activationEvents": [],
-  "main": "./dist/extension.js",
+  "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "git-commit-tools.helloWorld",
-        "title": "Hello World"
+        "command": "gitCommitTools.editCommitMessage",
+        "title": "Git: Edit Commit Message"
+      },
+      {
+        "command": "gitCommitTools.squashCommits",
+        "title": "Git: Squash Commits"
       }
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run package",
-    "compile": "webpack",
-    "watch": "webpack --watch",
-    "package": "webpack --mode production --devtool hidden-source-map",
-    "lint": "eslint src"
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
   },
   "devDependencies": {
-    "@types/vscode": "^1.103.0",
-    "@types/node": "22.x",
-    "typescript-eslint": "^8.56.1",
-    "eslint": "^9.39.3",
-    "typescript": "^5.9.3",
-    "ts-loader": "^9.5.4",
-    "webpack": "^5.105.3",
-    "webpack-cli": "^6.0.1"
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
   }
 }
