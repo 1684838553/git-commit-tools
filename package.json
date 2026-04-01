@@ -2,13 +2,13 @@
   "name": "git-commit-tools",
   "displayName": "Git Commit Tools",
   "description": "Edit commit messages and squash arbitrary commits, inspired by CLion",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": ["SCM Providers"],
   "activationEvents": [],
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
