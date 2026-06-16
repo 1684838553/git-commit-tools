@@ -256,23 +256,9 @@ export async function isRebaseInProgress(cwd: string): Promise<boolean> {
   }
 }
 
-function shellEscape(s: string): string {
-  return "'" + s.replace(/'/g, "'\\''") + "'";
-}
-
 function writeTempScript(content: string): string {
   const tmpFile = path.join(os.tmpdir(), `git-commit-tools-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`);
   fs.writeFileSync(tmpFile, content, { mode: 0o755 });
-  
-  // Convert Windows path to Git Bash compatible path
-  if (process.platform === 'win32') {
-    // C:\path\to\file -> /c/path/to/file
-    const normalized = tmpFile.replace(/\\/g, '/');
-    const match = normalized.match(/^([A-Za-z]):(.*)$/);
-    if (match) {
-      return `/${match[1].toLowerCase()}${match[2]}`;
-    }
-  }
   return tmpFile;
 }
 

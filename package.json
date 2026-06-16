@@ -3,6 +3,7 @@
   "displayName": "Git Commit Tools",
   "description": "Edit commit messages and squash arbitrary commits, inspired by CLion",
   "version": "0.1.5",
+  "publisher": "jdrunk",
   "engines": {
     "vscode": "^1.85.0"
   },
