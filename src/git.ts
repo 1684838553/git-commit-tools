@@ -47,17 +47,34 @@ export async function editCommitMessage(cwd: string, hash: string, newMessage: s
   const headHash = await exec('git rev-parse HEAD', cwd);
 
   if (headHash === hash) {
-    await exec(`git commit --amend -m ${shellEscape(newMessage)}`, cwd);
+    const msgFile = path.join(os.tmpdir(), `git-commit-msg-${Date.now()}.txt`);
+    fs.writeFileSync(msgFile, newMessage, 'utf8');
+    try {
+      await exec(`git commit --amend -F "${msgFile}"`, cwd);
+    } finally {
+      try { fs.unlinkSync(msgFile); } catch {}
+    }
   } else {
-    // Write a script that replaces 'pick' with 'reword' for the target commit
     const shortHash = hash.substring(0, 7);
-    const seqScript = writeTempScript(
-      `sed -i '' 's/^pick ${shortHash}/reword ${shortHash}/' "$1"`,
-    );
-    // Write a script that writes the new message into the editor file
-    const msgScript = writeTempScript(
-      `printf ${shellEscape(newMessage)} > "$1"`,
-    );
+    const seqScript = writeTempScript(`#!/bin/bash
+python3 - "$1" << 'PYEOF'
+import sys
+todo_file = sys.argv[1]
+short_hash = "${shortHash}"
+with open(todo_file, 'r') as f:
+    lines = f.readlines()
+result = []
+for line in lines:
+    if line.strip().startswith(f'pick {short_hash}'):
+        result.append(line.replace('pick ', 'reword ', 1))
+    else:
+        result.append(line)
+with open(todo_file, 'w') as f:
+    f.writelines(result)
+PYEOF`);
+    const msgFile = path.join(os.tmpdir(), `git-commit-msg-${Date.now()}.txt`);
+    fs.writeFileSync(msgFile, newMessage, 'utf8');
+    const msgScript = writeTempScript(`cat "${msgFile}" > "$1"`);
 
     try {
       await exec(
@@ -67,6 +84,7 @@ export async function editCommitMessage(cwd: string, hash: string, newMessage: s
     } finally {
       cleanupTemp(seqScript);
       cleanupTemp(msgScript);
+      try { fs.unlinkSync(msgFile); } catch {}
     }
   }
 }
@@ -117,7 +135,13 @@ export async function squashCommits(
   if (isTopN) {
     // Simple case: selected commits are the top N contiguous commits
     await exec(`git reset --soft ${oldestHash}~1`, cwd);
-    await exec(`git commit -m ${shellEscape(message)}`, cwd);
+    const msgFile = path.join(os.tmpdir(), `git-commit-msg-${Date.now()}.txt`);
+    fs.writeFileSync(msgFile, message, 'utf8');
+    try {
+      await exec(`git commit -F "${msgFile}"`, cwd);
+    } finally {
+      try { fs.unlinkSync(msgFile); } catch {}
+    }
     return;
   }
 
@@ -127,7 +151,9 @@ export async function squashCommits(
   // 2. Move selected commits right after the first selected commit
   // 3. Change the moved ones to 'fixup'
   const todoScript = writeTempScript(generateTodoRewriterScript(firstShort, restShorts));
-  const msgScript = writeTempScript(`printf ${shellEscape(message)} > "$1"`);
+  const msgFile = path.join(os.tmpdir(), `git-commit-msg-${Date.now()}.txt`);
+  fs.writeFileSync(msgFile, message, 'utf8');
+  const msgScript = writeTempScript(`cat "${msgFile}" > "$1"`);
 
   try {
     await exec(
@@ -137,6 +163,7 @@ export async function squashCommits(
   } finally {
     cleanupTemp(todoScript);
     cleanupTemp(msgScript);
+    try { fs.unlinkSync(msgFile); } catch {}
   }
 }
 
@@ -236,6 +263,16 @@ function shellEscape(s: string): string {
 function writeTempScript(content: string): string {
   const tmpFile = path.join(os.tmpdir(), `git-commit-tools-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`);
   fs.writeFileSync(tmpFile, content, { mode: 0o755 });
+  
+  // Convert Windows path to Git Bash compatible path
+  if (process.platform === 'win32') {
+    // C:\path\to\file -> /c/path/to/file
+    const normalized = tmpFile.replace(/\\/g, '/');
+    const match = normalized.match(/^([A-Za-z]):(.*)$/);
+    if (match) {
+      return `/${match[1].toLowerCase()}${match[2]}`;
+    }
+  }
   return tmpFile;
 }
 

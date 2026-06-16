@@ -22,7 +22,9 @@ export function deactivate() { }
 
 async function cmdEditCommitMessage() {
   const cwd = getWorkspaceRoot();
-  if (!cwd) { return; }
+  if (!cwd) {
+    return;
+  }
 
   const err = await preflightCheck(cwd);
   if (err) {
@@ -31,10 +33,14 @@ async function cmdEditCommitMessage() {
   }
 
   const commits = await safeGetLog(cwd);
-  if (!commits) { return; }
+  if (!commits) { 
+    return; 
+  }
 
   const picked = await pickOneCommit(commits, 'Select a commit to edit its message');
-  if (!picked) { return; }
+  if (!picked) {
+     return; 
+    }
 
   const newMessage = await vscode.window.showInputBox({
     prompt: 'Enter new commit message',
@@ -42,7 +48,9 @@ async function cmdEditCommitMessage() {
     validateInput: v => v.trim() ? null : 'Message cannot be empty',
   });
 
-  if (!newMessage) { return; }
+  if (!newMessage) { 
+    return;
+  }
 
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: 'Editing commit message...' },
@@ -61,7 +69,9 @@ async function cmdEditCommitMessage() {
 
 async function cmdSquashCommits() {
   const cwd = getWorkspaceRoot();
-  if (!cwd) { return; }
+  if (!cwd) { 
+    return;
+   }
 
   const err = await preflightCheck(cwd);
   if (err) {
@@ -70,7 +80,9 @@ async function cmdSquashCommits() {
   }
 
   const commits = await safeGetLog(cwd);
-  if (!commits) { return; }
+  if (!commits) { 
+    return;
+   }
 
   // Multi-select: user picks any number of commits
   const selected = await pickManyCommits(commits, 'Select commits to squash (pick 2 or more)');
@@ -104,7 +116,9 @@ async function cmdSquashCommits() {
     'Squash',
   );
 
-  if (confirmed !== 'Squash') { return; }
+  if (confirmed !== 'Squash') { 
+    return; 
+  }
 
   const fullText = doc.getText();
   const message = fullText
