@@ -9,6 +9,7 @@ export interface CommitInfo {
   message: string;
   author: string;
   date: string;
+  isMerge: boolean;
 }
 
 function exec(command: string, cwd: string): Promise<string> {
@@ -29,7 +30,7 @@ export async function getRepoRoot(cwd: string): Promise<string> {
 
 export async function getCommitLog(cwd: string, count: number = 50): Promise<CommitInfo[]> {
   const SEP = '<<SEP>>';
-  const format = `%H${SEP}%h${SEP}%s${SEP}%an${SEP}%ad`;
+  const format = `%H${SEP}%h${SEP}%s${SEP}%an${SEP}%ad${SEP}%P`;
   const raw = await exec(
     `git log -n ${count} --format="${format}" --date=short`,
     cwd,
@@ -38,8 +39,9 @@ export async function getCommitLog(cwd: string, count: number = 50): Promise<Com
     return [];
   }
   return raw.split('\n').map(line => {
-    const [hash, shortHash, message, author, date] = line.split(SEP);
-    return { hash, shortHash, message, author, date };
+    const [hash, shortHash, message, author, date, parents] = line.split(SEP);
+    const isMerge = parents ? parents.split(' ').length > 1 : false;
+    return { hash, shortHash, message, author, date, isMerge };
   });
 }
 
@@ -52,7 +54,7 @@ export async function editCommitMessage(cwd: string, hash: string, newMessage: s
     try {
       await exec(`git commit --amend -F "${msgFile}"`, cwd);
     } finally {
-      try { fs.unlinkSync(msgFile); } catch {}
+      try { fs.unlinkSync(msgFile); } catch { }
     }
   } else {
     const shortHash = hash.substring(0, 7);
@@ -84,7 +86,7 @@ PYEOF`);
     } finally {
       cleanupTemp(seqScript);
       cleanupTemp(msgScript);
-      try { fs.unlinkSync(msgFile); } catch {}
+      try { fs.unlinkSync(msgFile); } catch { }
     }
   }
 }
@@ -140,7 +142,7 @@ export async function squashCommits(
     try {
       await exec(`git commit -F "${msgFile}"`, cwd);
     } finally {
-      try { fs.unlinkSync(msgFile); } catch {}
+      try { fs.unlinkSync(msgFile); } catch { }
     }
     return;
   }
@@ -163,7 +165,7 @@ export async function squashCommits(
   } finally {
     cleanupTemp(todoScript);
     cleanupTemp(msgScript);
-    try { fs.unlinkSync(msgFile); } catch {}
+    try { fs.unlinkSync(msgFile); } catch { }
   }
 }
 

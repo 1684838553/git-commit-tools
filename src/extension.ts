@@ -33,14 +33,19 @@ async function cmdEditCommitMessage() {
   }
 
   const commits = await safeGetLog(cwd);
-  if (!commits) { 
-    return; 
+  if (!commits) {
+    return;
   }
 
   const picked = await pickOneCommit(commits, 'Select a commit to edit its message');
   if (!picked) {
-     return; 
-    }
+    return;
+  }
+
+  if (picked.isMerge) {
+    vscode.window.showErrorMessage('Cannot edit merge commit message. Merge commits cannot be rebased.');
+    return;
+  }
 
   const newMessage = await vscode.window.showInputBox({
     prompt: 'Enter new commit message',
@@ -48,7 +53,7 @@ async function cmdEditCommitMessage() {
     validateInput: v => v.trim() ? null : 'Message cannot be empty',
   });
 
-  if (!newMessage) { 
+  if (!newMessage) {
     return;
   }
 
@@ -69,9 +74,9 @@ async function cmdEditCommitMessage() {
 
 async function cmdSquashCommits() {
   const cwd = getWorkspaceRoot();
-  if (!cwd) { 
+  if (!cwd) {
     return;
-   }
+  }
 
   const err = await preflightCheck(cwd);
   if (err) {
@@ -80,9 +85,9 @@ async function cmdSquashCommits() {
   }
 
   const commits = await safeGetLog(cwd);
-  if (!commits) { 
+  if (!commits) {
     return;
-   }
+  }
 
   // Multi-select: user picks any number of commits
   const selected = await pickManyCommits(commits, 'Select commits to squash (pick 2 or more)');
@@ -90,6 +95,15 @@ async function cmdSquashCommits() {
     if (selected && selected.length === 1) {
       vscode.window.showWarningMessage('Please select at least 2 commits to squash.');
     }
+    return;
+  }
+
+  // Check if any selected commit is a merge commit
+  const mergeCommits = selected.filter(c => c.isMerge);
+  if (mergeCommits.length > 0) {
+    vscode.window.showErrorMessage(
+      `Cannot squash: ${mergeCommits.length} merge commit(s) selected. Merge commits cannot be rebased.`
+    );
     return;
   }
 
@@ -116,8 +130,8 @@ async function cmdSquashCommits() {
     'Squash',
   );
 
-  if (confirmed !== 'Squash') { 
-    return; 
+  if (confirmed !== 'Squash') {
+    return;
   }
 
   const fullText = doc.getText();
@@ -194,7 +208,7 @@ async function safeGetLog(cwd: string): Promise<CommitInfo[] | undefined> {
 
 function commitToQuickPickItem(c: CommitInfo) {
   return {
-    label: `$(git-commit) ${c.shortHash}`,
+    label: c.isMerge ? `$(git-merge) ${c.shortHash} (merge)` : `$(git-commit) ${c.shortHash}`,
     description: c.message,
     detail: `${c.author} | ${c.date}`,
     commit: c,
